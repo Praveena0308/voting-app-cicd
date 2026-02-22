@@ -190,6 +190,7 @@ sudo apt upgrade -y
 
 # Install Java (Jenkins requirement)
 sudo apt install openjdk-11-jdk -y
+
 java -version
 
 # Add Jenkins repository
@@ -206,9 +207,12 @@ sudo apt install jenkins -y
 
 # Start Jenkins
 sudo systemctl start jenkins
+
 sudo systemctl enable jenkins
+
 sudo systemctl status jenkins
-1.2 Initial Jenkins Access
+
+## 1.2 Initial Jenkins Access
 bash
 # Get initial admin password
 sudo cat /var/lib/jenkins/secrets/initialAdminPassword
@@ -230,7 +234,8 @@ docker --version
 
 # Restart Jenkins to apply changes
 sudo systemctl restart jenkins
-1.4 Essential Jenkins Plugins
+
+## 1.4 Essential Jenkins Plugins
 Install these plugins via Jenkins UI:
 
 Pipeline (already installed)
@@ -244,25 +249,13 @@ Configuration as Code - For JCasC
 Credentials Binding - For secure credentials
 
 2️⃣ JENKINS CONFIGURATION AS CODE (JCASC)
-2.1 Understanding JCasC
+
+## 2.1 Understanding JCasC
 JCasC allows you to define Jenkins configuration in YAML files, making your setup reproducible and version-controlled.
 
-2.2 Switch to Jenkins User
-bash
-# Switch to Jenkins user
-sudo -u jenkins -s
-
-# Navigate to Jenkins home
-cd $JENKINS_HOME
-# Usually /var/lib/jenkins
-
-# Check Jenkins home location
-echo $JENKINS_HOME
-pwd
 2.3 Create JCasC Configuration Directory
 bash
-# Exit from jenkins user first
-exit
+
 
 # Create casc_configs directory
 sudo mkdir -p /var/lib/jenkins/casc_configs
@@ -272,7 +265,8 @@ sudo chown -R jenkins:jenkins /var/lib/jenkins/casc_configs
 2.4 Create Jenkins.yaml Configuration File
 bash
 # Create and edit the JCasC file
-sudo nano /var/lib/jenkins/casc_configs/jenkins.yaml
+ 
+
 Paste this configuration:
 
 yaml
@@ -297,8 +291,9 @@ jenkins:
       allowAnonymousRead: false
 
 # Credentials configuration
-credentials:
-  system:
+    
+    credentials:
+    system:
     domainCredentials:
       - credentials:
           # GitHub credentials
@@ -334,6 +329,8 @@ unclassified:
             scm:
               git:
                 remote: "https://github.com/your-org/pipeline-utils.git"
+
+
 2.5 Set Proper File Permissions
 bash
 # Secure the configuration file (read-only for jenkins user)
@@ -341,6 +338,7 @@ sudo chmod 600 /var/lib/jenkins/casc_configs/jenkins.yaml
 
 # Verify permissions
 ls -la /var/lib/jenkins/casc_configs/
+
 2.6 Configure Jenkins Service for JCasC
 There are two ways to configure JCasC:
 
@@ -360,6 +358,8 @@ export GITHUB_USERNAME="Praveena0308"
 export GITHUB_TOKEN="ghp_your_github_token_here"
 export DOCKER_USERNAME="pravee033"
 export DOCKER_TOKEN="dckr_pat_your_docker_token_here"
+
+
 Method B: Using systemd service file (More Reliable)
 bash
 # Create backup first
@@ -402,7 +402,10 @@ ls -la /var/lib/jenkins/plugins/ | grep configuration-as-code
 # Visit Jenkins UI: Manage Jenkins → Configuration as Code
 # Or check logs:
 sudo journalctl -u jenkins | grep "Configuration as Code"
+
+
 3️⃣ GITHUB & DOCKER HUB CREDENTIALS SETUP
+
 3.1 Generate GitHub Personal Access Token
 Go to GitHub.com → Settings → Developer settings → Personal access tokens → Tokens (classic)
 
@@ -422,13 +425,17 @@ Select permissions: "Read & Write"
 Copy the token (starts with dckr_pat_)
 
 3.3 Set Environment Variables
-Add to /etc/default/jenkins or /lib/systemd/system/jenkins.service:
+Add to 
+ 
+    /etc/default/jenkins or /lib/systemd/system/jenkins.service:
 
 bash
-export GITHUB_USERNAME="Praveena0308"
-export GITHUB_TOKEN="ghp_your_github_token_here"
-export DOCKER_USERNAME="pravee033"
-export DOCKER_TOKEN="dckr_pat_your_docker_token_here"
+
+    export GITHUB_USERNAME="Praveena0308"
+    export GITHUB_TOKEN="ghp_your_github_token_here"
+    export DOCKER_USERNAME="pravee033"
+    export DOCKER_TOKEN="dckr_pat_your_docker_token_here"
+
 3.4 Verify Credentials in Jenkins
 bash
 # You can also verify via Jenkins CLI
@@ -436,6 +443,7 @@ java -jar jenkins-cli.jar -s http://localhost:8080/ list-credentials
 Or check in UI: Manage Jenkins → Manage Credentials
 
 4️⃣ SMEE.IO WEBHOOK CONFIGURATION
+
 4.1 Why Smee.io?
 When Jenkins runs on localhost or behind a firewall, GitHub cannot send webhooks directly. Smee.io acts as a tunnel:
 
@@ -451,6 +459,7 @@ sudo npm install --global smee-client
 
 # Verify installation
 smee --version
+
 4.3 Create a Smee Channel
 Go to https://smee.io
 
@@ -467,8 +476,9 @@ smee --url https://smee.io/your-unique-channel-123 \
 Important: Keep this terminal window open! Or run as a service:
 
 bash
-# Create systemd service for smee
-sudo nano /etc/systemd/system/smee.service
+
+     Create systemd service for smee
+    sudo nano /etc/systemd/system/smee.service
 ini
 [Unit]
 Description=Smee Webhook Forwarder
@@ -477,7 +487,9 @@ After=network.target jenkins.service
 [Service]
 Type=simple
 User=jenkins
-ExecStart=/usr/bin/smee --url https://smee.io/your-unique-channel-123 --path /github-webhook/ --port 8080
+ExecStart=/usr/bin/smee --url 
+        
+    https://smee.io/your-unique-channel-123 --path /github-webhook/ --port 8080
 Restart=always
 RestartSec=10
 
@@ -486,8 +498,11 @@ WantedBy=multi-user.target
 bash
 # Enable and start the service
 sudo systemctl enable smee
+
 sudo systemctl start smee
+
 sudo systemctl status smee
+
 4.5 Configure GitHub Webhook
 Go to your GitHub repository: https://github.com/Praveena0308/voting-app-cicd
 
@@ -512,8 +527,10 @@ git add .
 git commit -m "Test webhook"
 git push origin main
 
-# Check smee terminal - should show:
-# POST http://localhost:8080/github-webhook/ - 200
+Check smee terminal - should show:
+POST http://localhost:8080/github-webhook/ - 200
+
+
 5️⃣ JENKINS PIPELINE DEVELOPMENT
 5.1 Create Pipeline Job
 Jenkins Dashboard → New Item
@@ -597,37 +614,52 @@ groups jenkins
 
 # Fix:
 sudo usermod -aG docker jenkins
+
 sudo systemctl restart jenkins
+
 Issue 2: "docker: not found" inside containers
+
 Solution: Mount Docker socket and use Docker-in-Docker images
 
-groovy
-agent {
+
+    groovy
+    agent {
     docker {
         image 'docker:25.0-dind'
         reuseNode true
         args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock'
+     }
     }
-}
 Issue 3: Docker API version mismatch
 text
+
 Error response from daemon: client version 1.41 is too old.
+
 Solution: Set explicit API version
 
 bash
-export DOCKER_API_VERSION=1.44
+      
+      export DOCKER_API_VERSION=1.44
+
+
 Issue 4: Python externally-managed-environment error
 text
+
 error: externally-managed-environment
+
 Solution: Use virtual environment
 
 bash
-python3 -m venv /venv
-source /venv/bin/activate
-pip install -r requirements.txt
+
+     python3 -m venv /venv
+    source /venv/bin/activate
+    pip install -r requirements.txt
+
 Issue 5: .NET runtime identifier issues
 text
+
 error NETSDK1047: Assets file doesn't have a target for 'net7.0/linux-x64'
+
 Solution: Specify runtime in all commands
 
 bash
@@ -643,7 +675,7 @@ ls -la /var/lib/jenkins/casc_configs/jenkins.yaml
 sudo ls -la /var/lib/jenkins/casc_configs/
 
 # Check Jenkins logs
-sudo journalctl -u jenkins | grep -i "casc\|configuration"
+sudo journalctl -u jenkins | grep -i "casc \ | configuration"
 
 # Test configuration
 sudo -u jenkins java -jar /usr/share/jenkins/jenkins.war --version
@@ -664,14 +696,20 @@ Jenkins Service Commands
 bash
 # Start/Stop/Restart
 sudo systemctl start jenkins
+
 sudo systemctl stop jenkins
+
 sudo systemctl restart jenkins
+
 sudo systemctl status jenkins
+
 
 # View logs
 sudo journalctl -u jenkins -f
+
 sudo tail -f /var/log/jenkins/jenkins.log
 JCasC Commands
+
 bash
 # Switch to jenkins user
 sudo -u jenkins -s
@@ -696,10 +734,15 @@ smee --url https://smee.io/your-channel --path /github-webhook/ --port 8080
 
 # Create service
 sudo nano /etc/systemd/system/smee.service
+
 sudo systemctl enable smee
+
 sudo systemctl start smee
+
 sudo systemctl status smee
+
 Docker Commands
+
 bash
 # Add user to docker group
 sudo usermod -aG docker jenkins
@@ -751,9 +794,13 @@ Security	Credential management, secure tokens
 Linux	Systemd services, user management, permissions
 Your Pipeline Achievements:
 ✅ Automated builds on every git push
+
 ✅ Three microservices built in parallel
+
 ✅ Docker images created and versioned
+
 ✅ Images pushed to Docker Hub
+
 ✅ Full CI/CD pipeline with zero manual intervention
 
 📝 FINAL NOTES
