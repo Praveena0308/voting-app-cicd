@@ -84,11 +84,15 @@ pipeline {
                 # Install Docker CLI
                 apt-get update && apt-get install -y docker.io
                 
-                # Set Docker API version to match host
+                # Set Docker API version
                 export DOCKER_API_VERSION=1.44
                 
-                dotnet restore Worker.csproj
-                dotnet build Worker.csproj -c Release
+                # Clean and restore with explicit runtime
+                dotnet clean
+                dotnet restore Worker.csproj -r linux-x64
+                dotnet build Worker.csproj -c Release -r linux-x64 --no-restore
+                dotnet publish Worker.csproj -c Release -o /app -r linux-x64 --no-restore
+                
                 docker build -t worker-app:${IMAGE_TAG} .
             '''
                         }
