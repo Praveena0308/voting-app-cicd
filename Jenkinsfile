@@ -80,9 +80,12 @@ pipeline {
                     }
                     steps {
                         dir('worker') {
-                           sh '''
+                          sh '''
                 # Install Docker CLI
                 apt-get update && apt-get install -y docker.io
+                
+                # Set Docker API version to match host
+                export DOCKER_API_VERSION=1.44
                 
                 dotnet restore Worker.csproj
                 dotnet build Worker.csproj -c Release
