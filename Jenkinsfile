@@ -27,7 +27,7 @@ pipeline {
                 stage('Build Vote') {
                     agent {
                         docker {
-                            image 'docker:20.10-dind'  // Use this instead of python:3.9-slim
+                            image 'docker:25.0-dind'  // Use this instead of python:3.9-slim
                             reuseNode true
                             args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock'
                         }
@@ -48,7 +48,7 @@ pipeline {
                 stage('Build Result') {
                     agent {
                         docker {
-                            image 'docker:20.10-dind'
+                            image 'docker:25.0-dind'
                             reuseNode true
                             args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock'
                         }
