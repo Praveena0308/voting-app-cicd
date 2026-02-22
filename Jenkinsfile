@@ -5,7 +5,7 @@ pipeline {
     triggers {
         // This enables GitHub webhook trigger
         githubPush()
-        
+    }
     environment {
         // Define your variables!
         DOCKER_REGISTRY = 'docker.io'  // or your registry
