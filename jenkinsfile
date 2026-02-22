@@ -2,6 +2,10 @@ pipeline {
     // Only ONE agent declaration at top level!
     agent any  // This runs on Jenkins agent, then each stage can override
     
+    triggers {
+        // This enables GitHub webhook trigger
+        githubPush()
+        
     environment {
         // Define your variables!
         DOCKER_REGISTRY = 'docker.io'  // or your registry
