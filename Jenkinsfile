@@ -1,23 +1,20 @@
 pipeline {
-    // Only ONE agent declaration at top level!
-    agent any  // This runs on Jenkins agent, then each stage can override
-    
+    agent any
+
     triggers {
-        // This enables GitHub webhook trigger
         githubPush()
     }
+
     environment {
-        // Define your variables!
-        DOCKER_REGISTRY = 'docker.io'  // or your registry
+        DOCKER_REGISTRY = 'docker.io'
         DOCKER_CREDENTIALS = credentials('docker-hub-credentials')
-        IMAGE_TAG = "${BUILD_NUMBER}-${GIT_COMMIT.take(8)}"  // Unique tag
         GIT_COMMIT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+        IMAGE_TAG = "${BUILD_NUMBER}-${GIT_COMMIT.take(8)}"
     }
-    
+
     stages {
         stage('Checkout') {
             steps {
-                // Fixed: Added quotes around URL
                 git branch: 'main',
                     credentialsId: 'github-credentials',
                     url: 'https://github.com/Praveena0308/voting-app-cicd.git'
@@ -26,74 +23,125 @@ pipeline {
         
         stage('Build Services') {
             parallel {
+                // ===== VOTE SERVICE (Python/Flask) =====
                 stage('Build Vote') {
                     agent {
                         docker {
-                            image 'node:14'
-                            reuseNode true  // Reuse workspace from checkout
+                            image 'python:3.9-slim'
+                            reuseNode true
+                            args '-u root:root'
                         }
                     }
                     steps {
-                        dir('vote') {  // Added missing braces!
+                        dir('vote') {
                             sh '''
-                                echo "Building Vote app..."
-                                npm install
-                                npm run build
+                                echo "🐍 Building Vote Service (Python)..."
+                                echo "Current directory: $(pwd)"
+                                echo "Files: $(ls -la)"
+                                
+                                # Install Python dependencies
+                                if [ -f "requirements.txt" ]; then
+                                    echo "📦 Installing from requirements.txt..."
+                                    pip install --no-cache-dir -r requirements.txt
+                                else
+                                    echo "⚠️ No requirements.txt found"
+                                fi
+                                
+                                # Build Docker image
+                                echo "🐳 Building Docker image..."
                                 docker build -t vote-app:${IMAGE_TAG} .
+                                docker tag vote-app:${IMAGE_TAG} vote-app:latest
                             '''
                         }
                     }
                 }
                 
+                // ===== RESULT SERVICE (Node.js) =====
                 stage('Build Result') {
                     agent {
                         docker {
                             image 'node:16-alpine'
                             reuseNode true
+                            args '-u root:root'
                         }
                     }
                     steps {
-                        dir('result') {  // Added missing braces!
+                        dir('result') {
                             sh '''
-                                echo "Building Result app..."
-                                npm install
-                                npm run build
+                                echo "🟩 Building Result Service (Node.js)..."
+                                echo "Current directory: $(pwd)"
+                                echo "Files: $(ls -la)"
+                                
+                                # Set npm cache to writable location
+                                mkdir -p /tmp/npm-cache
+                                npm config set cache /tmp/npm-cache --global
+                                
+                                # Install Node dependencies
+                                if [ -f "package.json" ]; then
+                                    echo "📦 Running npm install..."
+                                    npm ci || npm install
+                                else
+                                    echo "❌ package.json not found!"
+                                    exit 1
+                                fi
+                                
+                                # Build Docker image
+                                echo "🐳 Building Docker image..."
                                 docker build -t result-app:${IMAGE_TAG} .
+                                docker tag result-app:${IMAGE_TAG} result-app:latest
                             '''
                         }
                     }
                 }
                 
+                // ===== WORKER SERVICE (.NET) =====
                 stage('Build Worker') {
                     agent {
                         docker {
-                            image 'python:3.9-slim'
+                            image 'mcr.microsoft.com/dotnet/sdk:6.0'
                             reuseNode true
+                            args '-u root:root'
                         }
                     }
                     steps {
-                        dir('worker') {  // Added missing braces!
+                        dir('worker') {
                             sh '''
-                                echo "Building Worker app..."
-                                pip install -r requirements.txt
+                                echo "🎯 Building Worker Service (.NET)..."
+                                echo "Current directory: $(pwd)"
+                                echo "Files: $(ls -la)"
+                                
+                                # Restore .NET dependencies
+                                if [ -f "Worker.csproj" ]; then
+                                    echo "📦 Restoring .NET packages..."
+                                    dotnet restore Worker.csproj
+                                    
+                                    echo "🔨 Building .NET application..."
+                                    dotnet build Worker.csproj -c Release
+                                else
+                                    echo "❌ Worker.csproj not found!"
+                                    exit 1
+                                fi
+                                
+                                # Build Docker image
+                                echo "🐳 Building Docker image..."
                                 docker build -t worker-app:${IMAGE_TAG} .
+                                docker tag worker-app:${IMAGE_TAG} worker-app:latest
                             '''
                         }
                     }
                 }
-            }  // Close parallel
-        }  // Close Build Services stage
+            }
+        }
         
         stage('Package Docker Images') {
             steps {
                 script {
                     sh """
-                        echo "Tagging images for registry..."
+                        echo "📦 Tagging images for registry..."
                         docker tag vote-app:${IMAGE_TAG} ${DOCKER_REGISTRY}/pravee033/vote-app:latest
                         docker tag result-app:${IMAGE_TAG} ${DOCKER_REGISTRY}/pravee033/result-app:latest
                         docker tag worker-app:${IMAGE_TAG} ${DOCKER_REGISTRY}/pravee033/worker-app:latest
                         
-                        # Also tag with build number for versioning
                         docker tag vote-app:${IMAGE_TAG} ${DOCKER_REGISTRY}/pravee033/vote-app:${IMAGE_TAG}
                         docker tag result-app:${IMAGE_TAG} ${DOCKER_REGISTRY}/pravee033/result-app:${IMAGE_TAG}
                         docker tag worker-app:${IMAGE_TAG} ${DOCKER_REGISTRY}/pravee033/worker-app:${IMAGE_TAG}
@@ -107,7 +155,7 @@ pipeline {
                 script {
                     docker.withRegistry("https://index.docker.io/v1/", 'docker-hub-credentials') {
                         sh """
-                            echo "Pushing images to Docker Hub..."
+                            echo "📤 Pushing images to Docker Hub..."
                             docker push ${DOCKER_REGISTRY}/pravee033/vote-app:${IMAGE_TAG}
                             docker push ${DOCKER_REGISTRY}/pravee033/result-app:${IMAGE_TAG}
                             docker push ${DOCKER_REGISTRY}/pravee033/worker-app:${IMAGE_TAG}
@@ -119,7 +167,7 @@ pipeline {
                 }
             }
         }
-    }  // Close stages
+    }
     
     post {
         success {
