@@ -27,19 +27,19 @@ pipeline {
                 stage('Build Vote') {
                     agent {
                         docker {
-                            image 'python:3.9-slim'
+                            image 'docker:20.10-dind'  // Use this instead of python:3.9-slim
                             reuseNode true
                             args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock'
                         }
                     }
                     steps {
                         dir('vote') {
-                            sh '''
-                                echo "🐍 Building Vote Service..."
+                             sh '''
+                                apk add --no-cache python3 py3-pip  # Install Python in Alpine
                                 pip install --no-cache-dir -r requirements.txt
-                                echo "🐳 Building Docker image..."
                                 docker build -t vote-app:${IMAGE_TAG} .
-                            '''
+                  '''
+
                         }
                     }
                 }
@@ -48,7 +48,7 @@ pipeline {
                 stage('Build Result') {
                     agent {
                         docker {
-                            image 'node:16-alpine'
+                            image 'docker:20.10-dind'
                             reuseNode true
                             args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock'
                         }
@@ -56,13 +56,10 @@ pipeline {
                     steps {
                         dir('result') {
                             sh '''
-                                echo "🟩 Building Result Service..."
-                                mkdir -p /tmp/npm-cache
-                                npm config set cache /tmp/npm-cache --global
-                                npm ci
-                                echo "🐳 Building Docker image..."
-                                docker build -t result-app:${IMAGE_TAG} .
-                            '''
+                               apk add --no-cache nodejs npm  # Install Node.js
+                               npm ci
+                               docker build -t result-app:${IMAGE_TAG} .
+          '''
                         }
                     }
                 }
