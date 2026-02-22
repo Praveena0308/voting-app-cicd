@@ -87,16 +87,17 @@ pipeline {
                 # Set Docker API version
                 export DOCKER_API_VERSION=1.44
                 
-                # First restore packages
-                echo "📦 Restoring NuGet packages..."
-                dotnet restore Worker.csproj
+                echo "📦 Restoring NuGet packages for linux-x64..."
+                dotnet restore Worker.csproj -r linux-x64
                 
-                # Then clean and build
                 echo "🧹 Cleaning..."
                 dotnet clean
                 
-                echo "🔨 Building..."
-                dotnet build Worker.csproj -c Release
+                echo "🔨 Building for linux-x64..."
+                dotnet build Worker.csproj -c Release -r linux-x64 --no-restore
+                
+                echo "📦 Publishing for linux-x64..."
+                dotnet publish Worker.csproj -c Release -o /app -r linux-x64 --no-self-contained
                 
                 echo "🐳 Building Docker image..."
                 docker build -t worker-app:${IMAGE_TAG} .
