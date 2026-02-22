@@ -35,11 +35,17 @@ pipeline {
                     steps {
                         dir('vote') {
                              sh '''
-                                apk add --no-cache python3 py3-pip  # Install Python in Alpine
-                                pip install --no-cache-dir -r requirements.txt
-                                docker build -t vote-app:${IMAGE_TAG} .
-                  '''
-
+                apk add --no-cache python3 py3-pip py3-venv
+                
+                # Create and use virtual environment
+                python3 -m venv /venv
+                source /venv/bin/activate
+                
+                pip install --no-cache-dir -r requirements.txt
+                
+                # Build Docker image (uses host's Docker)
+                docker build -t vote-app:${IMAGE_TAG} .
+            '''
                         }
                     }
                 }
@@ -75,13 +81,14 @@ pipeline {
                     }
                     steps {
                         dir('worker') {
-                            sh '''
-                                echo "🎯 Building Worker Service (.NET 7.0)..."
-                                dotnet restore Worker.csproj
-                                dotnet build Worker.csproj -c Release
-                                echo "🐳 Building Docker image..."
-                                docker build -t worker-app:${IMAGE_TAG} .
-                            '''
+                           sh '''
+                # Install Docker CLI
+                apt-get update && apt-get install -y docker.io
+                
+                dotnet restore Worker.csproj
+                dotnet build Worker.csproj -c Release
+                docker build -t worker-app:${IMAGE_TAG} .
+            '''
                         }
                     }
                 }
