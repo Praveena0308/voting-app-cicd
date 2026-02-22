@@ -10,7 +10,7 @@ pipeline {
         // Define your variables!
         DOCKER_REGISTRY = 'docker.io'  // or your registry
         DOCKER_CREDENTIALS = credentials('docker-hub-credentials')
-        IMAGE_TAG = "${BUILD_NUMBER}-${GIT_COMMIT[0..7]}"  // Unique tag
+        IMAGE_TAG = "${BUILD_NUMBER}-${GIT_COMMIT.take(8)}"  // Unique tag
         GIT_COMMIT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
     }
     
