@@ -35,15 +35,14 @@ pipeline {
                     steps {
                         dir('vote') {
                              sh '''
-                apk add --no-cache python3 py3-pip py3-venv
+                # Alpine uses python3-venv, not py3-venv
+                apk add --no-cache python3 py3-pip python3-dev
                 
-                # Create and use virtual environment
+                # Create virtual environment (Alpine way)
                 python3 -m venv /venv
                 source /venv/bin/activate
                 
                 pip install --no-cache-dir -r requirements.txt
-                
-                # Build Docker image (uses host's Docker)
                 docker build -t vote-app:${IMAGE_TAG} .
             '''
                         }
