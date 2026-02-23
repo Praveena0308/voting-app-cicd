@@ -128,7 +128,9 @@ pipeline {
                             docker push ${DOCKER_REGISTRY}/pravee033/vote-app:latest
                             docker push ${DOCKER_REGISTRY}/pravee033/result-app:latest
                             docker push ${DOCKER_REGISTRY}/pravee033/worker-app:latest
-                        """
+                        
+                        
+    """
                     }
                 }
             }
